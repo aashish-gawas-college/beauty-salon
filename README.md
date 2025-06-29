@@ -25,7 +25,7 @@ A modern, responsive website for **Oshin Beauty Salon & Academy** located in Kot
 
 ## 📍 Live Demo
 
-[🔗 View Live](https://your-live-site.com)
+[🔗 View Live](https://beauty-salon-flame.vercel.app/)
 
 
 ## 📦 Setup Instructions
