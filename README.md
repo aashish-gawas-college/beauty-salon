@@ -31,7 +31,7 @@ A modern, responsive website for **Oshin Beauty Salon & Academy** located in Kot
 ## 📦 Setup Instructions
 
 ```bash
-git clone https://github.com/yourusername/oshin-beauty-salon.git
-cd oshin-beauty-salon
+git clone https://github.com/aashish-gawas-college/beauty-salon.git
+cd beauty-salon
 npm install
 npm run dev
