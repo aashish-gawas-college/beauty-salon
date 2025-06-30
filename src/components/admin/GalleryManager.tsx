@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Upload, Link } from 'lucide-react';
 
 interface GalleryItem {
   id: string;
@@ -19,6 +19,8 @@ export const GalleryManager = () => {
     photo_url: '',
     caption: ''
   });
+  const [imageInputType, setImageInputType] = useState<'url' | 'upload'>('url');
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -32,41 +34,81 @@ export const GalleryManager = () => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      const toastId = toast({
+      toast({
         title: "Error",
         description: "Failed to fetch gallery",
         variant: "destructive",
       });
-      setTimeout(() => toastId.dismiss(), 5000);
     } else {
       setGallery(data || []);
     }
   };
 
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `gallery/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      toast({
+        title: "Error",
+        description: "Failed to upload image",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from('images')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    let photoUrl = formData.photo_url;
+    
+    if (imageInputType === 'upload' && imageFile) {
+      const uploadedUrl = await uploadImage(imageFile);
+      if (!uploadedUrl) return;
+      photoUrl = uploadedUrl;
+    }
+
+    if (!photoUrl) {
+      toast({
+        title: "Error",
+        description: "Please provide an image URL or upload a file",
+        variant: "destructive",
+      });
+      return;
+    }
     
     const { error } = await supabase
       .from('gallery')
       .insert([{
-        photo_url: formData.photo_url,
+        photo_url: photoUrl,
         caption: formData.caption || null
       }]);
 
     if (error) {
-      const toastId = toast({
+      toast({
         title: "Error",
         description: "Failed to add image",
         variant: "destructive",
       });
-      setTimeout(() => toastId.dismiss(), 5000);
     } else {
-      const toastId = toast({
+      toast({
         title: "Success",
         description: "Image added successfully",
       });
-      setTimeout(() => toastId.dismiss(), 5000);
       setFormData({ photo_url: '', caption: '' });
+      setImageFile(null);
       fetchGallery();
     }
   };
@@ -78,18 +120,16 @@ export const GalleryManager = () => {
       .eq('id', id);
 
     if (error) {
-      const toastId = toast({
+      toast({
         title: "Error",
         description: "Failed to delete image",
         variant: "destructive",
       });
-      setTimeout(() => toastId.dismiss(), 5000);
     } else {
-      const toastId = toast({
+      toast({
         title: "Success",
         description: "Image deleted successfully",
       });
-      setTimeout(() => toastId.dismiss(), 5000);
       fetchGallery();
     }
   };
@@ -102,12 +142,44 @@ export const GalleryManager = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              placeholder="Photo URL"
-              value={formData.photo_url}
-              onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
-              required
-            />
+            <div className="space-y-2">
+              <Label htmlFor="image-input">Gallery Image</Label>
+              <div className="flex gap-2 mb-2">
+                <Button
+                  type="button"
+                  variant={imageInputType === 'url' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setImageInputType('url')}
+                >
+                  <Link className="w-4 h-4 mr-1" />
+                  URL
+                </Button>
+                <Button
+                  type="button"
+                  variant={imageInputType === 'upload' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setImageInputType('upload')}
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  Upload
+                </Button>
+              </div>
+              
+              {imageInputType === 'url' ? (
+                <Input
+                  placeholder="Image URL"
+                  value={formData.photo_url}
+                  onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
+                />
+              ) : (
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                />
+              )}
+            </div>
+            
             <Input
               placeholder="Caption (optional)"
               value={formData.caption}
