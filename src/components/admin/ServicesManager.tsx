@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { Trash2, Edit, Plus, Upload, Link } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Trash2, Edit, Plus, Upload, Link } from "lucide-react";
 
 interface Service {
   id: string;
@@ -21,13 +21,13 @@ export const ServicesManager = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    photo_url: '',
-    short_description: '',
-    duration: '',
-    benefits: ''
+    name: "",
+    photo_url: "",
+    short_description: "",
+    duration: "",
+    benefits: "",
   });
-  const [imageInputType, setImageInputType] = useState<'url' | 'upload'>('url');
+  const [imageInputType, setImageInputType] = useState<"url" | "upload">("url");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const { toast } = useToast();
 
@@ -37,9 +37,9 @@ export const ServicesManager = () => {
 
   const fetchServices = async () => {
     const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from("services")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (error) {
       toast({
@@ -53,12 +53,12 @@ export const ServicesManager = () => {
   };
 
   const uploadImage = async (file: File): Promise<string | null> => {
-    const fileExt = file.name.split('.').pop();
+    const fileExt = file.name.split(".").pop();
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `services/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('images')
+      .from("images")
       .upload(filePath, file);
 
     if (uploadError) {
@@ -70,19 +70,17 @@ export const ServicesManager = () => {
       return null;
     }
 
-    const { data } = supabase.storage
-      .from('images')
-      .getPublicUrl(filePath);
+    const { data } = supabase.storage.from("images").getPublicUrl(filePath);
 
     return data.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     let photoUrl = formData.photo_url;
-    
-    if (imageInputType === 'upload' && imageFile) {
+
+    if (imageInputType === "upload" && imageFile) {
       const uploadedUrl = await uploadImage(imageFile);
       if (!uploadedUrl) return;
       photoUrl = uploadedUrl;
@@ -93,14 +91,16 @@ export const ServicesManager = () => {
       photo_url: photoUrl || null,
       short_description: formData.short_description || null,
       duration: formData.duration || null,
-      benefits: formData.benefits ? formData.benefits.split('\n').filter(b => b.trim()) : null
+      benefits: formData.benefits
+        ? formData.benefits.split("\n").filter((b) => b.trim())
+        : null,
     };
 
     if (isEditing) {
       const { error } = await supabase
-        .from('services')
+        .from("services")
         .update(serviceData)
-        .eq('id', isEditing);
+        .eq("id", isEditing);
 
       if (error) {
         toast({
@@ -118,9 +118,7 @@ export const ServicesManager = () => {
         fetchServices();
       }
     } else {
-      const { error } = await supabase
-        .from('services')
-        .insert([serviceData]);
+      const { error } = await supabase.from("services").insert([serviceData]);
 
       if (error) {
         toast({
@@ -143,20 +141,24 @@ export const ServicesManager = () => {
     setIsEditing(service.id);
     setFormData({
       name: service.name,
-      photo_url: service.photo_url || '',
-      short_description: service.short_description || '',
-      duration: service.duration || '',
-      benefits: service.benefits ? service.benefits.join('\n') : ''
+      photo_url: service.photo_url || "",
+      short_description: service.short_description || "",
+      duration: service.duration || "",
+      benefits: service.benefits ? service.benefits.join("\n") : "",
     });
-    setImageInputType('url');
+    setImageInputType("url");
     setImageFile(null);
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase
-      .from('services')
-      .delete()
-      .eq('id', id);
+  const handleDelete = async (id: string, photoUrl: string | null) => {
+    const { error } = await supabase.from("services").delete().eq("id", id);
+
+    if (!error && photoUrl) {
+      const path = photoUrl.split("/storage/v1/object/public/images/")[1];
+      if (path) {
+        await supabase.storage.from("images").remove([path]);
+      }
+    }
 
     if (error) {
       toast({
@@ -175,13 +177,13 @@ export const ServicesManager = () => {
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      photo_url: '',
-      short_description: '',
-      duration: '',
-      benefits: ''
+      name: "",
+      photo_url: "",
+      short_description: "",
+      duration: "",
+      benefits: "",
     });
-    setImageInputType('url');
+    setImageInputType("url");
     setImageFile(null);
   };
 
@@ -189,45 +191,51 @@ export const ServicesManager = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? 'Edit Service' : 'Add New Service'}</CardTitle>
+          <CardTitle>
+            {isEditing ? "Edit Service" : "Add New Service"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               placeholder="Service Name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               required
             />
-            
+
             <div className="space-y-2">
               <Label htmlFor="image-input">Service Image</Label>
               <div className="flex gap-2 mb-2">
                 <Button
                   type="button"
-                  variant={imageInputType === 'url' ? 'default' : 'outline'}
+                  variant={imageInputType === "url" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setImageInputType('url')}
+                  onClick={() => setImageInputType("url")}
                 >
                   <Link className="w-4 h-4 mr-1" />
                   URL
                 </Button>
                 <Button
                   type="button"
-                  variant={imageInputType === 'upload' ? 'default' : 'outline'}
+                  variant={imageInputType === "upload" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setImageInputType('upload')}
+                  onClick={() => setImageInputType("upload")}
                 >
                   <Upload className="w-4 h-4 mr-1" />
                   Upload
                 </Button>
               </div>
-              
-              {imageInputType === 'url' ? (
+
+              {imageInputType === "url" ? (
                 <Input
                   placeholder="Image URL"
                   value={formData.photo_url}
-                  onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, photo_url: e.target.value })
+                  }
                 />
               ) : (
                 <Input
@@ -241,29 +249,39 @@ export const ServicesManager = () => {
             <Textarea
               placeholder="Short Description"
               value={formData.short_description}
-              onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, short_description: e.target.value })
+              }
             />
             <Input
               placeholder="Duration (e.g., 60-90 minutes)"
               value={formData.duration}
-              onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, duration: e.target.value })
+              }
             />
             <Textarea
               placeholder="Benefits (one per line)"
               value={formData.benefits}
-              onChange={(e) => setFormData({ ...formData, benefits: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, benefits: e.target.value })
+              }
               rows={4}
             />
             <div className="flex gap-2">
               <Button type="submit" className="bg-pink-500 hover:bg-pink-600">
                 <Plus className="w-4 h-4 mr-2" />
-                {isEditing ? 'Update Service' : 'Add Service'}
+                {isEditing ? "Update Service" : "Add Service"}
               </Button>
               {isEditing && (
-                <Button type="button" variant="outline" onClick={() => {
-                  setIsEditing(null);
-                  resetForm();
-                }}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(null);
+                    resetForm();
+                  }}
+                >
                   Cancel
                 </Button>
               )}
@@ -280,10 +298,14 @@ export const ServicesManager = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{service.name}</h3>
                   {service.short_description && (
-                    <p className="text-gray-600 mt-1">{service.short_description}</p>
+                    <p className="text-gray-600 mt-1">
+                      {service.short_description}
+                    </p>
                   )}
                   {service.duration && (
-                    <p className="text-sm text-gray-500 mt-1">Duration: {service.duration}</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Duration: {service.duration}
+                    </p>
                   )}
                   {service.benefits && service.benefits.length > 0 && (
                     <div className="mt-2">
@@ -300,14 +322,14 @@ export const ServicesManager = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleEdit(service)}
+                    onClick={() => { handleEdit(service); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => handleDelete(service.id)}
+                    onClick={() => handleDelete(service.id, service.photo_url)}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
